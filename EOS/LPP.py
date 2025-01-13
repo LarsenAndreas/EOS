@@ -60,8 +60,8 @@ def createLPPFormulation(
     pbar.update()
 
     ## CAPACITY constraint
-    K = ConCapacity.getFeasibilityMatrix(req_feasible, cam_resolution, **kwargs)
-    pbar.update()
+    # K = ConCapacity.getFeasibilityMatrix(req_feasible, cam_resolution, **kwargs)
+    # pbar.update()
 
     # STRIPS constraint
     strips_constraint = ConStrips.getFeasbilityMatrix(req_feasible)

@@ -5,15 +5,12 @@ from math import floor
 import numpy as np
 import pandas as pd
 from dataGenerator import genCustomerRequests, genFeasibleRequests
-from scoring import electre_III, topsis
 from LPP import createLPPFormulation
 from skyfield.api import EarthSatellite, load
 from tqdm import tqdm
 from utility.api import getTLE
 from utility.plotting import plotRequests, plotSatPaths, plotSolutions
 from utility.utils import getFeasibleAngles
-
-from solvers import solver_cplex, solver_dag, solver_glpk, solver_gurobi, solver_pulp, solver_vns
 
 rng = np.random.default_rng(seed=42)
 
@@ -122,7 +119,7 @@ def scenario(
 def solve(
     LPP,
     scoring_method: str = "TOPSIS",  # "TOPSIS", "ELECTRE", or "WSA"
-    solution_method: str = "DAG",  # "gurobi", "PuLP", "cplex", "VNS", "random", or "DAG"
+    solution_method: str = "PuLP",  # "gurobi", "PuLP", "cplex", "VNS", "random", or "DAG"
     **kwargs,
 ):
 
@@ -138,13 +135,14 @@ def solve(
     data = LPP["req_feasible"][criteria_cols]  #  We only want to base the score on the specifed criteria
 
     if scoring_method == "TOPSIS":
+        from scoring import topsis
         score = topsis(data, criteria_max, criteria_weights)
 
     elif scoring_method == "ELECTRE":
+        from scoring import electre_III
         criteria_thresholds = kwargs.get("criteria_thresholds", None)
         if criteria_thresholds is None:
             raise Exception("Criteria thresholds must be provided for ELECTRE method!")
-
         score = electre_III(data, criteria_thresholds, criteria_max, criteria_weights)
 
     elif scoring_method == "WSA":  # Weight Space Analysis https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=10436690&tag=1
@@ -157,27 +155,34 @@ def solve(
     print(f'Solving using "{solution_method}"...')
     match solution_method.lower():
         case "gurobi":
+            from solvers import solver_gurobi
             x = solver_gurobi.solve(score=score, **LPP)
         case "pulp":
+            from solvers import solver_pulp
             x = solver_pulp.solve(score=score, **LPP)
         case "cplex":
+            from solvers import solver_cplex
             x = solver_cplex.solve(score=score, **LPP)
         case "glpk":
+            from solvers import solver_glpk
             x = solver_glpk.solve(score=score, bin_vars=range(len(LPP["req_feasible"])), **LPP)
         case "dag":
+            raise Exception('"DAG" solver not yet implemented!')
+            from solvers import solver_dag
             x = solver_dag.solve(
                 score=score,
                 edge_search_depth=kwargs.get("edge_search_depth", 25),  # Only used for solution_method="DAG"
                 **LPP,
             )
-        case "vna":
+        case "vns":
+            from solvers import solver_vns
             x = solver_vns.solve(score, LPP, LPP["req_feasible"], max_time=120, max_iter_N=1000)
         case "random":
             raise Exception('"random" solver not yet implemented!')
         case _:
-            raise Exception(f'Solution method "{solution_method}" not recognized! Please use "gurobi", "PuLP", "cplex", "GLPK", "DAG", or "VNS"')
+            raise Exception(f'Solution method "{solution_method}" not recognized! Please use "gurobi", "PuLP", "cplex", "GLPK", "DAG", "VNS", or "RANDOM"')
 
-    print(f"Solution found in {timedelta(seconds=time.perf_counter() - t_start)}s")
+    print(f"Solution found in {timedelta(seconds=time.perf_counter() - t_start_solving)}s")
 
     print(f"Total Time: {timedelta(seconds=time.perf_counter() - t_start)}s")
 
@@ -293,9 +298,8 @@ if __name__ == "__main__":
         simplify=True,
         dt_acq=20,
         horizon_dt=8,  # Planning horizon in hours
-        max_off_nadir_angle=30,
-        sat_height=694,
-        rotation_speed=30 / 12,
+        ona_max=30,
+        angular_velocity=30 / 12,
         cam_resolution=1,
         capacity_limit=1000000,
         use_cloud_cover_data=False,
@@ -311,7 +315,6 @@ if __name__ == "__main__":
     params = dict(
         scoring_method="TOPSIS",
         solution_method="PULP",
-        alpha=1,
         criteria_thresholds=pd.DataFrame(
             {
                 "area": {"q": 0, "p": 50, "v": 1000},
@@ -324,7 +327,6 @@ if __name__ == "__main__":
                 "uncertainty": {"q": 0, "p": 2, "v": 5},
             }
         ),
-        edge_search_depth=25,
     )
     pprint(params)
     print("#" * len("## Solution Params ##") + "\n")

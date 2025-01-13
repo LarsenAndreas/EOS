@@ -28,12 +28,11 @@ def getFeasibleAngles(
 
     Args:
         sat_data (list[EarthSatellite,]): _description_
-        t_acq (list[datetime,]): _description_
-        ona_max (float): _description_
-        toensurequalityofimageindegrees (_type_): _description_
+        t_acq (list[datetime,]): Acquisition times
+        ona_max (float): Maximum Off Nadir Angle, to ensure quality of image in degrees (https://www.euspaceimaging.com/what-is-ona-off-nadir-angle-in-satellite-imagery/)
 
     Kwargs:
-        ona_min (float, optional): minimum Off Nadir Angle in degrees, to ensure quality of image in degrees (https://www.euspaceimaging.com/what-is-ona-off-nadir-angle-in-satellite-imagery/).
+        ona_min (float, optional): Minimum Off Nadir Angle in degrees, to ensure quality of image in degrees (https://www.euspaceimaging.com/what-is-ona-off-nadir-angle-in-satellite-imagery/).
 
     Returns:
         np.ndarray: _description_
