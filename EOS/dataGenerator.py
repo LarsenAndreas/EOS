@@ -1,9 +1,8 @@
 import os
 import time
 from math import ceil
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
-import folium
 import numpy as np
 import pandas as pd
 from skyfield.api import load, wgs84
